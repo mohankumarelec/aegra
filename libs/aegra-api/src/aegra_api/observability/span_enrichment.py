@@ -187,6 +187,10 @@ def seed_otel_trace_id(run_id: str) -> None:
     that downstream instrumentors (LangChainInstrumentor) inherit it.  No real
     span is created or exported — ``NonRecordingSpan`` is the standard OTEL
     mechanism for W3C ``traceparent`` propagation.
+
+    The ``attach()`` token is intentionally not detached: this function must
+    only be called from a short-lived, task-scoped context (``ctx.run(...)``
+    or a per-job asyncio task) where the context is discarded on completion.
     """
     span_ctx = SpanContext(
         trace_id=_uuid.UUID(run_id).int,
