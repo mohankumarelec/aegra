@@ -204,29 +204,43 @@ class TestMakeRunTraceContext:
         """Reset context var before each test."""
         _trace_attrs.set(None)
 
+    _RUN_ID = "aaaaaaaa-1111-2222-3333-bbbbbbbbbbbb"
+
     def test_returned_context_contains_expected_attributes(self) -> None:
         """Returned context has all trace attributes pre-set."""
-        ctx = make_run_trace_context("run-1", "thread-1", "my_graph", "user-1")
+        ctx = make_run_trace_context(self._RUN_ID, "thread-1", "my_graph", "user-1")
 
         attrs = ctx.run(_trace_attrs.get)
         assert attrs["langfuse.user.id"] == "user-1"
         assert attrs["langfuse.session.id"] == "thread-1"
         assert attrs["langfuse.trace.name"] == "my_graph"
-        assert attrs["langfuse.trace.metadata.run_id"] == "run-1"
+        assert attrs["langfuse.trace.metadata.run_id"] == self._RUN_ID
         assert attrs["langfuse.trace.metadata.thread_id"] == "thread-1"
         assert attrs["langfuse.trace.metadata.graph_id"] == "my_graph"
 
     def test_does_not_pollute_caller_context(self) -> None:
         """Calling make_run_trace_context() does not mutate the caller's context."""
-        make_run_trace_context("run-1", "thread-1", "my_graph", "user-1")
+        make_run_trace_context(self._RUN_ID, "thread-1", "my_graph", "user-1")
 
         assert _trace_attrs.get() is None
 
     def test_anonymous_user_omits_user_attributes(self) -> None:
         """Passing user_identity=None omits user.id keys from the context."""
-        ctx = make_run_trace_context("run-1", "thread-1", "my_graph", None)
+        ctx = make_run_trace_context(self._RUN_ID, "thread-1", "my_graph", None)
 
         attrs = ctx.run(_trace_attrs.get)
         assert "langfuse.user.id" not in attrs
         assert "user.id" not in attrs
         assert attrs["langfuse.trace.name"] == "my_graph"
+
+    def test_seeds_otel_trace_id_from_run_id(self) -> None:
+        """The returned context has an OTEL trace_id derived from run_id."""
+        import uuid
+
+        from opentelemetry import trace
+
+        ctx = make_run_trace_context(self._RUN_ID, "thread-1", "my_graph", "user-1")
+
+        span = ctx.run(trace.get_current_span)
+        trace_id = span.get_span_context().trace_id
+        assert trace_id == uuid.UUID(self._RUN_ID).int

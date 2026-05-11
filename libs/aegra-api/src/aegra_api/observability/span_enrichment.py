@@ -21,9 +21,14 @@ Usage::
 """
 
 import contextvars
+import random
+import uuid as _uuid
 
+from opentelemetry import context as otel_context
+from opentelemetry import trace
 from opentelemetry.context import Context
 from opentelemetry.sdk.trace import ReadableSpan, Span, SpanProcessor
+from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 
 # Per-request context variable holding span attributes to inject.
 # None means no trace context is set; on_start() is a no-op in that case.
@@ -118,6 +123,23 @@ def set_trace_context(
     _trace_attrs.set(attrs or None)
 
 
+def seed_otel_trace_id(run_id: str) -> None:
+    """Set a remote-parent span context whose trace_id is derived from *run_id*.
+
+    The ``run_id`` UUID (128-bit) is reused verbatim as the OTEL trace_id so
+    that downstream instrumentors (LangChainInstrumentor) inherit it.  No real
+    span is created or exported — ``NonRecordingSpan`` is the standard OTEL
+    mechanism for W3C ``traceparent`` propagation.
+    """
+    span_ctx = SpanContext(
+        trace_id=_uuid.UUID(run_id).int,
+        span_id=random.getrandbits(64),
+        is_remote=True,
+        trace_flags=TraceFlags(TraceFlags.SAMPLED),
+    )
+    otel_context.attach(trace.set_span_in_context(NonRecordingSpan(span_ctx)))
+
+
 def make_run_trace_context(
     run_id: str,
     thread_id: str,
@@ -131,6 +153,7 @@ def make_run_trace_context(
     context=ctx)`` so the background task starts with the correct trace data.
     """
     ctx = contextvars.copy_context()
+    ctx.run(seed_otel_trace_id, run_id)
     ctx.run(
         set_trace_context,
         user_id=user_identity,
