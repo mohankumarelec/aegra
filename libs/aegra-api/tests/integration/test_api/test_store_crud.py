@@ -213,7 +213,7 @@ class TestGetStoreItem:
 
     def test_get_item_with_empty_namespace_query_param(self, client, mock_store):
         """Test empty namespace query param is treated as no namespace"""
-        from unittest.mock import patch, wraps
+        from unittest.mock import patch
 
         from aegra_api.api.store import apply_user_namespace_scoping
 
@@ -268,7 +268,7 @@ class TestDeleteStoreItem:
 
     def test_delete_item_with_empty_namespace_query_param(self, client, mock_store):
         """Test empty namespace query param is treated as no namespace"""
-        from unittest.mock import patch, wraps
+        from unittest.mock import patch
 
         from aegra_api.api.store import apply_user_namespace_scoping
 

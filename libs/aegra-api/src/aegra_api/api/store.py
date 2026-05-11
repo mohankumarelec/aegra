@@ -106,7 +106,7 @@ async def delete_store_item(
     ns = None
     k = None
     if body is not None:
-        ns = body.namespace
+        ns = _normalize_namespace(body.namespace)
         k = body.key
     else:
         if key is None:
