@@ -55,12 +55,16 @@ class SpanEnrichmentProcessor(SpanProcessor):
 
     def on_start(self, span: Span, parent_context: Context | None = None) -> None:
         if span.parent is not None and span.parent.is_valid and not span.parent.is_remote:
-            # Skip local child spans only — spans whose parent arrived via
-            # a remote traceparent header are still local roots and must be enriched.
             return
         attrs = _trace_attrs.get()
         if not attrs:
             return
+        # Strip the injected remote parent (from seed_otel_trace_id) so the
+        # span exports as a true root.  The trace_id is already correct
+        # (inherited during construction).  Without this, Langfuse cannot
+        # identify a root span and trace-level input/output stay undefined.
+        if span.parent is not None and span.parent.is_remote:
+            span._parent = None  # noqa: SLF001
         for key, value in attrs.items():
             span.set_attribute(key, value)
 
