@@ -22,7 +22,7 @@ Usage::
 
 import contextvars
 import logging
-import random
+import secrets
 import uuid as _uuid
 from typing import Any
 
@@ -190,7 +190,7 @@ def seed_otel_trace_id(run_id: str) -> None:
     """
     span_ctx = SpanContext(
         trace_id=_uuid.UUID(run_id).int,
-        span_id=random.getrandbits(64),
+        span_id=secrets.randbits(64),
         is_remote=True,
         trace_flags=TraceFlags(TraceFlags.SAMPLED),
     )
