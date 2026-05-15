@@ -331,4 +331,8 @@ def get_auth_instance() -> Auth | None:
     backend = get_auth_backend()
     if isinstance(backend, LangGraphAuthBackend):
         return backend.auth_instance
+    logger.warning(
+        "get_auth_instance() called but backend is not LangGraphAuthBackend: %s",
+        type(backend).__name__,
+    )
     return None
